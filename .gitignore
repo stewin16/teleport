@@ -2,6 +2,13 @@
 .env.*
 !.env.example
 node_modules/
+dist/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Documentation, references, and research
+ps.md
+refrences/
+references/
+research/
