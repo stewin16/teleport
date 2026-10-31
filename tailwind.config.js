@@ -8,34 +8,62 @@ export default {
   theme: {
     extend: {
       colors: {
-        teleport: {
-          dark: "#090D16",
-          card: "#0F172A",
-          surface: "#1E293B",
-          border: "#334155",
-          accent: "#6366F1",
-          emerald: "#22C55E",
-          amber: "#F59E0B",
-          crimson: "#EF4444",
-          cyan: "#06B6D4"
+        bedrock: "#0B0F17",
+        surface: {
+          DEFAULT: "#101623",
+          hover: "#141C2C",
+          elevated: "#182236",
+          active: "#1E2B44"
+        },
+        rule: {
+          subtle: "#1B2434",
+          DEFAULT: "#26334A",
+          strong: "#3B4D6D"
+        },
+        ink: {
+          DEFAULT: "#F1F5F9",
+          muted: "#94A3B8",
+          faint: "#64748B",
+          inverse: "#0B0F17"
+        },
+        signal: {
+          DEFAULT: "#A3E635",
+          hover: "#BEF264",
+          dim: "rgba(163, 230, 53, 0.10)",
+          border: "rgba(163, 230, 53, 0.30)",
+          solid: "#65A30D"
+        },
+        danger: {
+          DEFAULT: "#F43F5E",
+          hover: "#FB7185",
+          dim: "rgba(244, 63, 94, 0.10)",
+          border: "rgba(244, 63, 94, 0.30)"
+        },
+        warn: {
+          DEFAULT: "#F59E0B",
+          hover: "#FBBF24",
+          dim: "rgba(245, 158, 11, 0.10)",
+          border: "rgba(245, 158, 11, 0.30)"
+        },
+        telemetry: {
+          DEFAULT: "#38BDF8",
+          dim: "rgba(56, 189, 248, 0.10)",
+          border: "rgba(56, 189, 248, 0.30)"
         }
       },
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"]
+        sans: ["Geologica", "IBM Plex Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Geologica", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "SFMono-Regular", "Menlo", "monospace"]
       },
-      animation: {
-        "pulse-subtle": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "border-glow": "borderGlow 4s ease infinite"
-      },
-      keyframes: {
-        borderGlow: {
-          "0%, 100%": { borderColor: "rgba(99, 102, 241, 0.4)" },
-          "50%": { borderColor: "rgba(34, 197, 94, 0.4)" }
-        }
+      letterSpacing: {
+        tightest: "-0.04em",
+        tighter: "-0.025em",
+        tight: "-0.015em",
+        normal: "0em",
+        wide: "0.02em"
       }
     }
   },
   plugins: []
 };
-

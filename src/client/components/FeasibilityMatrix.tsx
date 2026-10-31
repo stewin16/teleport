@@ -85,32 +85,32 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
   };
 
   return (
-    <div className="teleport-panel p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+    <div className="vantage-panel p-6 space-y-6 ticks">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rule pb-4">
         <div>
-          <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            <Gauge className="w-5 h-5 text-indigo-400" />
-            Deterministic Feasibility Engine & Physics Model
+          <h2 className="text-sm font-display font-medium text-ink flex items-center gap-2">
+            <Gauge className="w-4 h-4 text-signal" />
+            <span>Deterministic feasibility engine & physics model</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Evaluates hard hardware gates (G_total) and continuous utility (S_feasibility) with Time-to-Exhaustion physics
+          <p className="text-xs text-ink-muted mt-1">
+            Evaluates hard hardware gates (G_total) and continuous safety margin (S_feasibility) with Time-to-Exhaustion physics
           </p>
         </div>
 
         {/* TARGET SELECTOR DROPDOWN */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400">Target Node:</label>
+          <label className="text-xs text-ink-muted">target node:</label>
           <select
             value={selectedTargetId || ""}
             onChange={(e) => onSelectTarget(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500 font-mono"
+            className="bg-surface-elevated border border-rule text-ink text-xs rounded px-3 py-1.5 focus:outline-none focus:border-signal font-mono"
           >
-            <option value="" disabled>Select Target Device</option>
+            <option value="" disabled>Select target device</option>
             {devices
               .filter((d) => d.id !== workload?.currentDeviceId)
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name} ({d.os.toUpperCase()} · {d.arch})
+                  {d.name} ({d.os.toLowerCase()} / {d.arch})
                 </option>
               ))}
           </select>
@@ -118,57 +118,57 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
       </div>
 
       {!evaluation ? (
-        <div className="py-12 text-center text-slate-400 text-sm">
-          Please select a target device to evaluate mathematical migration feasibility.
+        <div className="py-12 text-center text-ink-muted text-xs">
+          Select a target device above to evaluate mathematical migration feasibility.
         </div>
       ) : (
         <div className="space-y-6">
           {/* TOP SUMMARY ROW: DECISION BANNER & SCORE */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
             <div
-              className={`md:col-span-2 rounded-xl p-4 border flex items-center gap-4 ${
+              className={`md:col-span-2 rounded p-4 border flex items-center gap-3.5 ${
                 evaluation.decision === "MIGRATE"
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                  ? "bg-signal-dim border-signal text-ink"
                   : evaluation.decision === "REMOTE_FALLBACK"
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
-                  : "bg-slate-800/60 border-slate-700 text-slate-300"
+                  ? "bg-warn-dim border-warn-border text-ink"
+                  : "bg-surface-elevated border-rule text-ink"
               }`}
             >
               {evaluation.decision === "MIGRATE" ? (
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-7 h-7 text-signal shrink-0" />
               ) : (
-                <AlertTriangle className="w-8 h-8 text-amber-400 shrink-0" />
+                <AlertTriangle className="w-7 h-7 text-warn shrink-0" />
               )}
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80">
-                  Engine Recommendation
+                <span className="text-[10px] text-ink-muted font-mono block">
+                  engine recommendation
                 </span>
-                <h3 className="text-lg font-bold tracking-tight text-white">
+                <h3 className="text-base font-display font-medium text-ink">
                   {evaluation.decision === "MIGRATE"
-                    ? "Safe for Live Migration"
+                    ? "Safe for live migration"
                     : evaluation.decision === "REMOTE_FALLBACK"
-                    ? "Remote Access Fallback Engaged"
-                    : "Keep Local on Source"}
+                    ? "Remote access fallback engaged"
+                    : "Preserve local execution"}
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5 line-clamp-1">
+                <p className="text-xs text-ink-muted mt-0.5 line-clamp-1">
                   {evaluation.reasons[0]}
                 </p>
               </div>
             </div>
 
             {/* FEASIBILITY SCORE GAUGE */}
-            <div className="rounded-xl p-4 bg-slate-900 border border-slate-800 flex flex-col justify-between">
-              <span className="text-xs text-slate-400">Continuous Feasibility</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-cyan-400">
+            <div className="rounded p-4 bg-surface border border-rule flex flex-col justify-between">
+              <span className="text-xs text-ink-muted">Continuous score</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-mono font-bold text-signal teleport-num">
                   {evaluation.score}
                 </span>
-                <span className="text-xs text-slate-400">/ 100</span>
+                <span className="text-xs text-ink-faint">/ 100</span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mt-2">
+              <div className="w-full h-1.5 rounded-full bg-bedrock overflow-hidden border border-rule mt-2">
                 <div
                   className={`h-full ${
-                    evaluation.score >= 60 ? "bg-emerald-400" : "bg-amber-400"
+                    evaluation.score >= 60 ? "bg-signal" : "bg-warn"
                   }`}
                   style={{ width: `${evaluation.score}%` }}
                 />
@@ -176,55 +176,55 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
             </div>
 
             {/* SAFETY MARGIN (TTE / TTM) */}
-            <div className="rounded-xl p-4 bg-slate-900 border border-slate-800 flex flex-col justify-between">
-              <span className="text-xs text-slate-400">Physics Safety Ratio</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-indigo-400">
+            <div className="rounded p-4 bg-surface border border-rule flex flex-col justify-between">
+              <span className="text-xs text-ink-muted">Physics safety ratio</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-mono font-bold text-signal teleport-num">
                   {evaluation.safetyMarginRatio}x
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  (TTE {evaluation.tteSeconds}s / TTM {evaluation.ttmSeconds}s)
+                <span className="text-[10px] text-ink-muted font-mono">
+                  (tte {evaluation.tteSeconds}s / ttm {evaluation.ttmSeconds}s)
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400">
-                Est. Downtime: ~{evaluation.estimatedInterruptionMs}ms
+              <span className="text-[10px] text-ink-faint">
+                est. downtime: ~{evaluation.estimatedInterruptionMs}ms
               </span>
             </div>
           </div>
 
           {/* 5 HARD COMPATIBILITY GATES */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Stage 1: Hard Compatibility Gates (G_total)
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-display font-medium text-ink">
+              Stage 1: Hard compatibility gates (G_total)
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
               {[
                 {
-                  label: "1. Workload Type",
-                  sub: "Is Checkpointable",
+                  label: "1. Workload type",
+                  sub: "Checkpointable state",
                   pass: evaluation.gates.workloadTypeGate,
                   icon: <Cpu className="w-4 h-4" />
                 },
                 {
-                  label: "2. ISA Compatibility",
+                  label: "2. ISA match",
                   sub: "x86_64 vs ARM64",
                   pass: evaluation.gates.isaCompatGate,
                   icon: <ShieldCheck className="w-4 h-4" />
                 },
                 {
-                  label: "3. Runtime Engine",
-                  sub: "Wasm / Node / Container",
+                  label: "3. Runtime engine",
+                  sub: "Wasm / container",
                   pass: evaluation.gates.runtimeCompatGate,
                   icon: <CheckCircle2 className="w-4 h-4" />
                 },
                 {
-                  label: "4. RAM Headroom",
-                  sub: "125% of Footprint",
+                  label: "4. RAM headroom",
+                  sub: "125% footprint",
                   pass: evaluation.gates.ramHeadroomGate,
                   icon: <HardDrive className="w-4 h-4" />
                 },
                 {
-                  label: "5. Network Latency",
+                  label: "5. Network latency",
                   sub: "RTT < 800ms",
                   pass: evaluation.gates.networkAliveGate,
                   icon: <Wifi className="w-4 h-4" />
@@ -232,20 +232,20 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
               ].map((gate, i) => (
                 <div
                   key={i}
-                  className={`p-3 rounded-xl border flex items-center justify-between ${
+                  className={`p-3 rounded border flex items-center justify-between ${
                     gate.pass
-                      ? "bg-slate-900/60 border-emerald-500/30 text-emerald-300"
-                      : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                      ? "bg-surface border-signal-border text-ink"
+                      : "bg-danger-dim border-danger-border text-danger"
                   }`}
                 >
                   <div>
-                    <h5 className="text-xs font-bold text-white">{gate.label}</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{gate.sub}</p>
+                    <h5 className="text-xs font-medium text-ink">{gate.label}</h5>
+                    <p className="text-[10px] text-ink-muted mt-0.5">{gate.sub}</p>
                   </div>
                   {gate.pass ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-signal shrink-0" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <XCircle className="w-4 h-4 text-danger shrink-0" />
                   )}
                 </div>
               ))}
@@ -253,15 +253,15 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
           </div>
 
           {/* AI EXPLAINABILITY AUDIT PANEL */}
-          <div className="rounded-xl border border-indigo-500/30 bg-slate-900/80 p-4 space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="rounded border border-rule-strong bg-surface-elevated p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-cyan-400" />
-                <h4 className="text-xs font-bold text-white tracking-tight uppercase">
-                  AI Causal Audit & Explainability Engine
+                <Sparkles className="w-4 h-4 text-signal" />
+                <h4 className="text-xs font-display font-medium text-ink">
+                  AI causal audit & explainability engine
                 </h4>
                 {aiAudit && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-rule text-signal">
                     {aiAudit.modelUsed}
                   </span>
                 )}
@@ -269,17 +269,17 @@ export const FeasibilityMatrix: React.FC<FeasibilityMatrixProps> = ({
               <button
                 onClick={handleRequestAiAudit}
                 disabled={isAuditing}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
+                className="vantage-btn-primary py-1 px-3 text-xs"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isAuditing ? "Auditing..." : "Generate AI Causal Audit"}</span>
+                <span>{isAuditing ? "Auditing..." : "Generate causal audit"}</span>
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            <p className="text-xs text-ink-muted leading-relaxed font-sans">
               {aiAudit
                 ? aiAudit.explanation
-                : "Click 'Generate AI Causal Audit' to produce a natural-language report breaking down the physical constraints, architectural incompatibilities, and safety equations behind this decision."}
+                : "Click 'Generate causal audit' to produce an exact analysis breaking down the physical constraints, architectural incompatibilities, and safety equations behind this decision."}
             </p>
           </div>
         </div>

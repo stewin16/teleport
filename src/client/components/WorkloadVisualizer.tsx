@@ -6,10 +6,11 @@ import {
   Zap,
   TrendingUp,
   Cpu,
-  ShieldAlert,
+  ShieldCheck,
   Radio,
   Boxes,
-  Activity
+  Activity,
+  ArrowRight
 } from "lucide-react";
 import { WorkloadState, Device } from "../types/teleport";
 
@@ -36,7 +37,7 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Animated HTML5 Canvas Rendering Loop
+  // Animated High-Precision Canvas Rendering Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !workload) return;
@@ -52,14 +53,14 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
       const width = canvas.width;
       const height = canvas.height;
 
-      // Clear Canvas
-      ctx.fillStyle = "#0A0E1A";
+      // Bedrock background
+      ctx.fillStyle = "#0B0F17";
       ctx.fillRect(0, 0, width, height);
 
-      // Subtle Grid Background
-      ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+      // Precision hairline grid
+      ctx.strokeStyle = "rgba(34, 46, 66, 0.4)";
       ctx.lineWidth = 1;
-      const gridSize = 24;
+      const gridSize = 28;
       for (let x = 0; x < width; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -74,44 +75,45 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
       }
 
       if (workload.type === "monte_carlo") {
-        // Render Monte Carlo Convergence & Geometric Brownian paths
+        // Monte Carlo Convergence & Geometric Brownian paths
         const history = workload.stateData?.history || [];
         if (history.length > 1) {
-          ctx.strokeStyle = "#6366F1";
-          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = "#A3E635";
+          ctx.lineWidth = 2;
           ctx.beginPath();
 
           const stepX = width / Math.max(20, history.length - 1);
           for (let i = 0; i < history.length; i++) {
             const val = history[i];
-            const normY = height - (val / 10) * (height - 30) - 15;
+            const normY = height - (val / 10) * (height - 36) - 18;
             if (i === 0) ctx.moveTo(0, normY);
             else ctx.lineTo(i * stepX, normY);
           }
           ctx.stroke();
 
-          // Gradient area fill
+          // Subtle signal gradient area fill
           ctx.lineTo(width, height);
           ctx.lineTo(0, height);
           const grad = ctx.createLinearGradient(0, 0, 0, height);
-          grad.addColorStop(0, "rgba(99, 102, 241, 0.25)");
-          grad.addColorStop(1, "rgba(99, 102, 241, 0.0)");
+          grad.addColorStop(0, "rgba(163, 230, 53, 0.15)");
+          grad.addColorStop(1, "rgba(163, 230, 53, 0.0)");
           ctx.fillStyle = grad;
           ctx.fill();
         }
 
-        // Animated Bell Curve / Horizon Ticker
-        ctx.fillStyle = "#22C55E";
+        // Ticker & statistics
+        ctx.fillStyle = "#A3E635";
         ctx.font = "11px 'JetBrains Mono', monospace";
-        ctx.fillText(`Simulated Path Iterations: ${workload.step.toLocaleString()}`, 16, 24);
-        ctx.fillText(`Running VaR (99%): ${workload.metrics.currentValue}%`, 16, 40);
+        ctx.fillText(`Simulated Path Iterations: ${workload.step.toLocaleString()}`, 16, 26);
+        ctx.fillStyle = "#94A3B8";
+        ctx.fillText(`Running VaR (99%): ${workload.metrics.currentValue}%`, 16, 42);
 
       } else if (workload.type === "neural_net") {
-        // Render Neural Loss Curve & Micro-Batch Gradient Nodes
+        // Neural Loss Curve & Micro-Batch Gradient Nodes
         const lossHistory = workload.stateData?.lossHistory || [];
         if (lossHistory.length > 1) {
-          ctx.strokeStyle = "#EC4899";
-          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = "#38BDF8";
+          ctx.lineWidth = 2;
           ctx.beginPath();
 
           const stepX = width / Math.max(20, lossHistory.length - 1);
@@ -124,42 +126,43 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
           ctx.stroke();
         }
 
-        // Pulsing Neural Nodes
+        // Animated weight nodes
         const nodes = [
           { x: width - 80, y: 50 },
           { x: width - 80, y: 100 },
           { x: width - 40, y: 75 }
         ];
-        ctx.strokeStyle = "rgba(236, 72, 153, 0.4)";
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
         for (const n of nodes) {
           ctx.beginPath();
-          ctx.arc(n.x, n.y, 6 + Math.sin(tickCount * 0.1) * 2, 0, Math.PI * 2);
-          ctx.fillStyle = "#EC4899";
+          ctx.arc(n.x, n.y, 5 + Math.sin(tickCount * 0.1) * 2, 0, Math.PI * 2);
+          ctx.fillStyle = "#38BDF8";
           ctx.fill();
           ctx.stroke();
         }
 
-        ctx.fillStyle = "#EC4899";
+        ctx.fillStyle = "#38BDF8";
         ctx.font = "11px 'JetBrains Mono', monospace";
-        ctx.fillText(`Optimization Step: #${workload.step.toLocaleString()}`, 16, 24);
-        ctx.fillText(`Categorical Loss: ${workload.metrics.currentValue}`, 16, 40);
+        ctx.fillText(`Optimization Step: #${workload.step.toLocaleString()}`, 16, 26);
+        ctx.fillStyle = "#94A3B8";
+        ctx.fillText(`Categorical Loss: ${workload.metrics.currentValue}`, 16, 42);
 
       } else {
-        // Generic Memory / Heatmap Grid for Container / GPU
-        const cols = 20;
-        const rows = 6;
+        // Linear Memory Matrix for Container / GPU
+        const cols = 24;
+        const rows = 5;
         const cellW = (width - 32) / cols;
         const cellH = (height - 48) / rows;
 
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const active = (r * cols + c + tickCount) % 7 === 0;
-            ctx.fillStyle = active ? "rgba(6, 182, 212, 0.6)" : "rgba(30, 41, 59, 0.5)";
+            const active = (r * cols + c + tickCount) % 9 === 0;
+            ctx.fillStyle = active ? "rgba(163, 230, 53, 0.7)" : "rgba(34, 46, 66, 0.5)";
             ctx.fillRect(16 + c * cellW, 36 + r * cellH, cellW - 2, cellH - 2);
           }
         }
 
-        ctx.fillStyle = "#06B6D4";
+        ctx.fillStyle = "#A3E635";
         ctx.font = "11px 'JetBrains Mono', monospace";
         ctx.fillText(`Active Execution Ticks: ${workload.step.toLocaleString()}`, 16, 24);
       }
@@ -180,73 +183,74 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
   const targetDevice = devices.find((d) => d.id === selectedTargetId);
 
   return (
-    <div className="teleport-panel p-5 space-y-4">
-      {/* WORKLOAD SELECTOR TABS & EXECUTION STATUS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+    <div className="vantage-panel p-5 space-y-4 ticks">
+      {/* HEADER & SEGMENTED WORKLOAD SELECTOR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-rule pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Boxes className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-sm font-bold text-white tracking-tight uppercase">
-              Active Computational Workload
+            <Boxes className="w-4 h-4 text-signal" />
+            <h2 className="text-sm font-display font-medium text-ink">
+              Active computational workload
             </h2>
             <span
-              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+              className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                 workload.status === "RUNNING"
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  ? "bg-signal-dim text-signal border-signal-border"
                   : workload.status === "FENCED_STOPPED"
-                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                  ? "bg-danger-dim text-danger border-danger-border"
                   : workload.status === "REMOTE_FALLBACK"
-                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                  : "bg-slate-800 text-slate-300 border-slate-700"
+                  ? "bg-warn-dim text-warn border-warn-border"
+                  : "bg-surface-elevated text-ink-muted border-rule"
               }`}
             >
-              {workload.status}
+              {workload.status.toLowerCase()}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Running on <span className="text-white font-medium">{sourceDevice?.name || workload.currentDeviceId}</span> under{" "}
-            <span className="font-mono text-emerald-400 font-semibold">Epoch #{workload.epoch}</span>
+          <p className="text-xs text-ink-muted mt-1">
+            Host: <span className="text-ink font-medium">{sourceDevice?.name || workload.currentDeviceId}</span>
+            <span className="text-ink-faint mx-2">/</span>
+            Lease: <span className="font-mono text-signal">epoch #{workload.epoch}</span>
           </p>
         </div>
 
-        {/* WORKLOAD TYPE SWITCHER BUTTONS */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+        {/* WORKLOAD TYPE SELECTOR */}
+        <div className="flex flex-wrap items-center gap-1 p-1 rounded bg-surface-elevated border border-rule text-xs">
           <button
             onClick={() => onSelectWorkloadType("workload-monte-carlo-var")}
-            className={`px-3 py-1 rounded-lg transition-all ${
+            className={`px-2.5 py-1 rounded transition-colors ${
               workload.id === "workload-monte-carlo-var"
-                ? "bg-indigo-600 text-white font-semibold"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-bedrock text-signal font-medium border border-rule-strong shadow-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             Monte Carlo (Tier A)
           </button>
           <button
             onClick={() => onSelectWorkloadType("workload-neural-optimizer")}
-            className={`px-3 py-1 rounded-lg transition-all ${
+            className={`px-2.5 py-1 rounded transition-colors ${
               workload.id === "workload-neural-optimizer"
-                ? "bg-indigo-600 text-white font-semibold"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-bedrock text-signal font-medium border border-rule-strong shadow-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             Neural Net (Tier A)
           </button>
           <button
             onClick={() => onSelectWorkloadType("workload-redis-criu")}
-            className={`px-3 py-1 rounded-lg transition-all ${
+            className={`px-2.5 py-1 rounded transition-colors ${
               workload.id === "workload-redis-criu"
-                ? "bg-indigo-600 text-white font-semibold"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-bedrock text-signal font-medium border border-rule-strong shadow-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
-            Redis Container (Tier B)
+            Redis CRIU (Tier B)
           </button>
           <button
             onClick={() => onSelectWorkloadType("workload-gpu-raytracer")}
-            className={`px-3 py-1 rounded-lg transition-all ${
+            className={`px-2.5 py-1 rounded transition-colors ${
               workload.id === "workload-gpu-raytracer"
-                ? "bg-indigo-600 text-white font-semibold"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-bedrock text-signal font-medium border border-rule-strong shadow-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             GPU Raytracer (Tier C)
@@ -254,10 +258,10 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
         </div>
       </div>
 
-      {/* WORKLOAD CANVAS & TELEMETRY ROW */}
+      {/* VISUALIZER CANVAS & CONTROL DECK */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* CANVAS MONITOR */}
-        <div className="lg:col-span-2 relative rounded-xl overflow-hidden border border-slate-800 bg-[#0A0E1A]">
+        <div className="lg:col-span-2 relative rounded overflow-hidden border border-rule bg-bedrock">
           <canvas
             ref={canvasRef}
             width={640}
@@ -265,50 +269,50 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
             className="w-full h-48 block"
           />
           {/* STEP COUNTER OVERLAY */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700/80 backdrop-blur-md">
-            <span className="text-[10px] text-slate-400 uppercase font-mono">Instruction Step:</span>
-            <span className="font-mono text-xs font-bold text-cyan-400">
+          <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface/90 border border-rule text-xs font-mono backdrop-blur-sm">
+            <span className="text-[10px] text-ink-faint">step:</span>
+            <span className="text-signal font-semibold teleport-num">
               #{workload.step.toLocaleString()}
             </span>
           </div>
         </div>
 
-        {/* METRICS & WORKLOAD SPECS */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Workload Tier:</span>
-              <span className="font-mono text-indigo-300 font-semibold">{workload.tier}</span>
+        {/* METRICS & TELEPORT DISPATCH */}
+        <div className="vantage-panel-elevated p-4 flex flex-col justify-between space-y-4">
+          <div className="space-y-2.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">workload tier:</span>
+              <span className="font-mono text-ink font-medium">{workload.tier}</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Memory Footprint:</span>
-              <span className="font-mono text-slate-200">{workload.memoryFootprintMB} MB</span>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">memory footprint:</span>
+              <span className="font-mono text-ink teleport-num">{workload.memoryFootprintMB} MB</span>
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Cross-ISA Capable:</span>
-              <span className="font-mono text-emerald-400 font-semibold">
-                {workload.tier === "TIER_A_PORTABLE" ? "YES (Wasm/State)" : "NO (ISA-Tied)"}
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">cross-architecture:</span>
+              <span className="font-mono text-signal">
+                {workload.tier === "TIER_A_PORTABLE" ? "portable (wasm/state)" : "isa-locked"}
               </span>
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Fencing Lease Status:</span>
-              <span className="font-mono text-emerald-400">Active (Epoch #{workload.epoch})</span>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">lease status:</span>
+              <span className="font-mono text-signal">active (epoch #{workload.epoch})</span>
             </div>
 
             {/* CONTROLS */}
-            <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+            <div className="pt-3 border-t border-rule flex items-center gap-2">
               {workload.status === "RUNNING" ? (
                 <button
                   onClick={() => onWorkloadAction("PAUSE")}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-all"
+                  className="flex-1 vantage-btn-secondary py-1.5 px-3 text-xs"
                 >
-                  <Pause className="w-3.5 h-3.5 text-amber-400" />
+                  <Pause className="w-3.5 h-3.5 text-warn" />
                   <span>Pause</span>
                 </button>
               ) : (
                 <button
                   onClick={() => onWorkloadAction("RESUME")}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-all"
+                  className="flex-1 vantage-btn-primary py-1.5 px-3 text-xs"
                 >
                   <Play className="w-3.5 h-3.5" />
                   <span>Resume</span>
@@ -316,8 +320,8 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
               )}
               <button
                 onClick={() => onWorkloadAction("RESET")}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition-all"
-                title="Reset Iteration Counter"
+                className="vantage-btn-secondary py-1.5 px-2 text-xs"
+                title="Reset Iterations"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -325,25 +329,19 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
           </div>
 
           {/* TELEPORT ACTION BUTTON */}
-          <div className="pt-4 border-t border-slate-800/80">
+          <div className="pt-3 border-t border-rule">
             <button
               onClick={onInitiateMigration}
               disabled={isMigrating || !selectedTargetId || selectedTargetId === workload.currentDeviceId}
-              className={`w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-all shadow-lg ${
-                isMigrating
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  : !selectedTargetId || selectedTargetId === workload.currentDeviceId
-                  ? "bg-slate-800/80 text-slate-400 border border-slate-700 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-indigo-500/25 active:scale-98"
-              }`}
+              className="w-full vantage-btn-primary py-2.5 text-xs font-semibold"
             >
-              <Zap className="w-4 h-4 text-cyan-300" />
+              <Zap className="w-4 h-4 text-signal-ink fill-signal-ink" />
               <span>
                 {isMigrating
-                  ? "Teleporting Workload..."
+                  ? "Teleporting state..."
                   : targetDevice
                   ? `Teleport to ${targetDevice.name}`
-                  : "Select a Target Device Below"}
+                  : "Select target node"}
               </span>
             </button>
           </div>
@@ -352,4 +350,3 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
     </div>
   );
 };
-

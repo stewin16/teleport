@@ -1,81 +1,211 @@
+/* Hallmark · theme: vantage · genre: modern-minimal · shape: app screen · hero: stage · posture: restrained · seed: cross-device-workload-migration-41df */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --bg-base: #090D16;
-    --card-surface: #0F172A;
-    --border-subtle: #1E293B;
-    --accent-indigo: #6366F1;
-    --accent-emerald: #22C55E;
-    --accent-amber: #F59E0B;
-    --accent-crimson: #EF4444;
+    --color-paper: oklch(13.5% 0.012 235);
+    --color-paper-2: oklch(17% 0.014 235);
+    --color-paper-3: oklch(21% 0.016 235);
+    --color-surface-hover: oklch(23% 0.018 235);
+    
+    --color-ink: oklch(95% 0.006 230);
+    --color-ink-2: oklch(82% 0.012 230);
+    --color-muted: oklch(66% 0.016 230);
+    --color-faint: oklch(54% 0.018 235);
+    
+    --color-rule: oklch(27% 0.014 235);
+    --color-rule-2: oklch(34% 0.016 235);
+    --color-rule-strong: oklch(42% 0.018 235);
+    
+    --color-signal: oklch(89% 0.19 126);
+    --color-signal-hover: oklch(93% 0.17 126);
+    --color-signal-ink: oklch(19% 0.04 126);
+    --color-focus: oklch(89% 0.19 126);
+    
+    --color-danger: oklch(63% 0.22 25);
+    --color-warn: oklch(76% 0.16 75);
+    --color-telemetry: oklch(76% 0.13 220);
+    
+    --color-mask-base: oklch(5% 0.005 235);
+    
+    --font-display: "Geologica", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Geologica", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    
+    --radius-card: 6px;
+    --radius-pill: 9999px;
+    --rule-hair: 1px;
+    --tick: 10px;
+    
+    --tracking-display: -0.03em;
+    --tracking-normal: 0em;
   }
 
-  body {
-    background-color: #090D16;
-    color: #F8FAFC;
-    overflow-x: hidden;
+  html, body {
+    overflow-x: clip;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-weight: 350;
+    font-variation-settings: "SHRP" 0;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-variation-settings: "SHRP" 100;
+    letter-spacing: var(--tracking-display);
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  /* Universal instant focus-visible (Hallmark Floor Rule 6) */
+  :focus-visible {
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - discreet and instrument-like */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #090D16;
+  background: var(--color-paper);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
-  border-radius: 9999px;
+  background: var(--color-rule);
+  border-radius: var(--radius-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--color-rule-strong);
 }
 
-/* Glassmorphism & Hairline Panels */
-.teleport-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  border-radius: 0.75rem;
+/* Vantage Instrument Hairline Panels */
+.vantage-panel {
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-card);
+  position: relative;
 }
 
-.teleport-panel-interactive {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  border-radius: 0.75rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.teleport-panel-interactive:hover {
-  border-color: rgba(99, 102, 241, 0.6);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.15);
+.vantage-panel-elevated {
+  background: var(--color-paper-3);
+  color: var(--color-ink);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  position: relative;
 }
 
-/* Monospace Telemetry Numbers */
-.teleport-num {
-  font-family: 'JetBrains Mono', monospace;
+/* Architectural Corner Ticks */
+.ticks {
+  position: relative;
+}
+.ticks::before,
+.ticks::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: var(--rule-hair) solid var(--color-rule-strong);
+  -webkit-mask: conic-gradient(at var(--tick) var(--tick), transparent 75%, var(--color-mask-base) 0) 0 0 / calc(100% - var(--tick)) calc(100% - var(--tick));
+  mask: conic-gradient(at var(--tick) var(--tick), transparent 75%, var(--color-mask-base) 0) 0 0 / calc(100% - var(--tick)) calc(100% - var(--tick));
+}
+
+/* Monospace Telemetry Numbers & Tabular Alignment */
+.teleport-num, .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
-/* Pulse animation for active epoch */
-@keyframes livePulse {
+/* Standard Vantage Primary Pill Button */
+.vantage-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-signal);
+  color: var(--color-signal-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1rem;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  border: none;
+}
+.vantage-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-signal-hover);
+  transform: translateY(-1px);
+}
+.vantage-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.vantage-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Secondary Wireframe Button */
+.vantage-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  color: var(--color-ink);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  padding: 0.5rem 1rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.vantage-btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-rule-strong);
+  background-color: var(--color-paper-3);
+  transform: translateY(-1px);
+}
+.vantage-btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.vantage-btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Live Pulse Animation for Monotonic Leases */
+@keyframes signalGlowPulse {
   0%, 100% {
     opacity: 1;
     transform: scale(1);
   }
   50% {
-    opacity: 0.5;
-    transform: scale(1.15);
+    opacity: 0.4;
+    transform: scale(1.18);
   }
 }
-.animate-live-pulse {
-  animation: livePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-signal-pulse {
+  animation: signalGlowPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Prefers-reduced-motion fallback (Hallmark Floor Rule 7) */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

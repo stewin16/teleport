@@ -30,7 +30,7 @@ export const App: React.FC = () => {
 
   // Local Web Battery API telemetry hook
   useBatteryTelemetry((localBattery) => {
-    // If running in browser with battery support, can update local node telemetry
+    // Real browser battery telemetry
   });
 
   const sourceDevice = devices.find((d) => d.id === workload?.currentDeviceId);
@@ -82,7 +82,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-bedrock text-ink flex flex-col font-sans">
       {/* 3-ZONE HEADER */}
       <TopBar
         currentTab={currentTab}
@@ -95,22 +95,22 @@ export const App: React.FC = () => {
 
       {/* CRITICAL BATTERY EVACUATION BANNER */}
       {isBatteryCritical && (
-        <div className="w-full bg-rose-600/20 border-b border-rose-500/40 px-4 py-2 flex items-center justify-between text-xs text-rose-200">
-          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+        <div className="w-full bg-danger-dim border-b border-danger-border px-4 py-2 text-xs text-danger">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 animate-bounce" />
-              <span className="font-bold">
-                CRITICAL POWER COLLAPSE ALERT: {sourceDevice?.name} battery is at {sourceDevice?.batteryLevel}%.
+              <AlertTriangle className="w-4 h-4 text-danger animate-pulse shrink-0" />
+              <span className="font-medium text-ink">
+                Critical power collapse alert: {sourceDevice?.name} battery is at {sourceDevice?.batteryLevel}%.
               </span>
-              <span className="hidden md:inline text-rose-300">
-                Physics engine recommends immediate migration or remote access fallback before power depletion.
+              <span className="hidden md:inline text-ink-muted">
+                Physics engine advises immediate workload evacuation before power depletion.
               </span>
             </div>
             <button
               onClick={() => handleInitiateMigration()}
-              className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] uppercase tracking-wider transition-all"
+              className="vantage-btn-primary py-1 px-3 text-xs bg-danger text-white hover:bg-danger-hover"
             >
-              Evacuate Workload Now
+              Evacuate workload
             </button>
           </div>
         </div>
@@ -119,9 +119,9 @@ export const App: React.FC = () => {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         
-        {/* VIEW 1: LIVE TELEPORT CONSOLE */}
+        {/* VIEW 1: LIVE CONSOLE */}
         {currentTab === "console" && (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-6">
             {/* 6-Stage Migration Stepper (when active) */}
             <MigrationStepper migrationEvent={migrationEvent} />
 
@@ -137,7 +137,7 @@ export const App: React.FC = () => {
               isMigrating={isMigrating}
             />
 
-            {/* Multi-Device Fleet Cards */}
+            {/* Multi-Device Fleet Grid */}
             <DeviceFleetGrid
               devices={devices}
               workload={workload}
@@ -149,7 +149,7 @@ export const App: React.FC = () => {
 
         {/* VIEW 2: FEASIBILITY MATRIX & CHAOS LAB */}
         {currentTab === "feasibility" && (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-6">
             <FeasibilityMatrix
               devices={devices}
               workload={workload}
@@ -168,7 +168,7 @@ export const App: React.FC = () => {
 
         {/* VIEW 3: REMOTE ACCESS VIEWPORT */}
         {currentTab === "remote" && (
-          <div className="animate-fade-in">
+          <div>
             <RemoteViewport
               workload={workload}
               devices={devices}
@@ -178,7 +178,7 @@ export const App: React.FC = () => {
 
         {/* VIEW 4: 18-SECTION BLUEPRINT EXPLORER */}
         {currentTab === "blueprint" && (
-          <div className="animate-fade-in">
+          <div>
             <BlueprintExplorer />
           </div>
         )}
@@ -192,17 +192,17 @@ export const App: React.FC = () => {
         onRegisterDevice={handleRegisterDevice}
       />
 
-      {/* FOOTER */}
-      <footer className="w-full border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
+      {/* RESTRAINED FOOTER */}
+      <footer className="w-full border-t border-rule py-4 px-6 text-xs text-ink-muted bg-surface/40">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>TELEPORT · Intelligent Cross-Device Workload Migration Platform · Bit N Build 2026 Finals</span>
-          <span className="font-mono text-[11px] text-slate-400">
-            Powered by OMNI Cognitive Architecture & Stanford STORM Research
+          <span className="font-mono text-[11px] text-ink-faint">
+            Monotonic Epoch Leases · AES-256-GCM State Vault · Sub-35ms Rollback
           </span>
         </div>
       </footer>
     </div>
   );
 };
-export default App;
 
+export default App;
