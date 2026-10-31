@@ -10,6 +10,7 @@
     "client": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/server.js",
+    "agent": "tsx src/agent/nodeAgent.ts",
     "test": "vitest run"
   },
   "dependencies": {
