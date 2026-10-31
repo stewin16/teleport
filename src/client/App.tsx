@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { TopBar, NavTab } from "./components/TopBar";
 import { DeviceFleetGrid } from "./components/DeviceFleetGrid";
 import { WorkloadVisualizer } from "./components/WorkloadVisualizer";
+import { YouTubeTabPlayer } from "./components/YouTubeTabPlayer";
 import { MigrationStepper } from "./components/MigrationStepper";
 import { FeasibilityMatrix } from "./components/FeasibilityMatrix";
 import { RemoteViewport } from "./components/RemoteViewport";
@@ -14,7 +15,7 @@ import { AlertTriangle, Zap, ShieldCheck } from "lucide-react";
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavTab>("console");
-  const [selectedTargetId, setSelectedTargetId] = useState<string>("node-macbook-m3");
+  const [selectedTargetId, setSelectedTargetId] = useState<string>("node-thinkpad-x1");
   const [isPairModalOpen, setIsPairModalOpen] = useState<boolean>(false);
   const [isMigrating, setIsMigrating] = useState<boolean>(false);
 
@@ -30,17 +31,17 @@ export const App: React.FC = () => {
 
   // Local Web Battery API telemetry hook
   useBatteryTelemetry((localBattery) => {
-    // Real browser battery telemetry
+    // If running in browser with battery support, can update local node telemetry
   });
 
   const sourceDevice = devices.find((d) => d.id === workload?.currentDeviceId);
   const isBatteryCritical = sourceDevice && !sourceDevice.isCharging && sourceDevice.batteryLevel <= 15;
 
-  const handleWorkloadAction = (action: "PAUSE" | "RESUME" | "RESET") => {
+  const handleWorkloadAction = (action: "PAUSE" | "RESUME" | "RESET" | "SEEK", payload?: any) => {
     fetch("/api/teleport/workloads/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workloadId: workload?.id, action })
+      body: JSON.stringify({ workloadId: workload?.id, action, payload })
     });
   };
 
@@ -82,7 +83,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bedrock text-ink flex flex-col font-sans">
+    <div className="min-h-screen bg-[#090D16] text-slate-100 flex flex-col font-sans">
       {/* 3-ZONE HEADER */}
       <TopBar
         currentTab={currentTab}
@@ -95,22 +96,22 @@ export const App: React.FC = () => {
 
       {/* CRITICAL BATTERY EVACUATION BANNER */}
       {isBatteryCritical && (
-        <div className="w-full bg-danger-dim border-b border-danger-border px-4 py-2 text-xs text-danger">
-          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
+        <div className="w-full bg-rose-600/20 border-b border-rose-500/40 px-4 py-2 flex items-center justify-between text-xs text-rose-200">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-danger animate-pulse shrink-0" />
-              <span className="font-medium text-ink">
-                Critical power collapse alert: {sourceDevice?.name} battery is at {sourceDevice?.batteryLevel}%.
+              <AlertTriangle className="w-4 h-4 text-rose-400 animate-bounce" />
+              <span className="font-bold">
+                CRITICAL POWER COLLAPSE ALERT: {sourceDevice?.name} battery is at {sourceDevice?.batteryLevel}%.
               </span>
-              <span className="hidden md:inline text-ink-muted">
-                Physics engine advises immediate workload evacuation before power depletion.
+              <span className="hidden md:inline text-rose-300">
+                Physics engine recommends immediate migration or remote access fallback before power depletion.
               </span>
             </div>
             <button
               onClick={() => handleInitiateMigration()}
-              className="vantage-btn-primary py-1 px-3 text-xs bg-danger text-white hover:bg-danger-hover"
+              className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] uppercase tracking-wider transition-all"
             >
-              Evacuate workload
+              Evacuate Workload Now
             </button>
           </div>
         </div>
@@ -124,6 +125,16 @@ export const App: React.FC = () => {
           <div className="space-y-6">
             {/* 6-Stage Migration Stepper (when active) */}
             <MigrationStepper migrationEvent={migrationEvent} />
+
+            {/* YouTube Media Tab Player (when YouTube workload selected) */}
+            {workload?.type === "youtube_player" && (
+              <YouTubeTabPlayer
+                workload={workload}
+                onWorkloadAction={handleWorkloadAction}
+                onInitiateMigration={() => handleInitiateMigration()}
+                isMigrating={isMigrating}
+              />
+            )}
 
             {/* Active Computation Visualizer */}
             <WorkloadVisualizer
@@ -192,17 +203,16 @@ export const App: React.FC = () => {
         onRegisterDevice={handleRegisterDevice}
       />
 
-      {/* RESTRAINED FOOTER */}
-      <footer className="w-full border-t border-rule py-4 px-6 text-xs text-ink-muted bg-surface/40">
+      {/* FOOTER */}
+      <footer className="w-full border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>TELEPORT · Intelligent Cross-Device Workload Migration Platform · Bit N Build 2026 Finals</span>
-          <span className="font-mono text-[11px] text-ink-faint">
-            Monotonic Epoch Leases · AES-256-GCM State Vault · Sub-35ms Rollback
+          <span className="font-mono text-[11px] text-slate-400">
+            Real Multi-Node Distributed Architecture
           </span>
         </div>
       </footer>
     </div>
   );
 };
-
 export default App;

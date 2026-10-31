@@ -1,16 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MonitorPlay,
-  Radio,
   Sliders,
-  Send,
   Pause,
   Play,
   RotateCcw,
   CheckCircle,
-  AlertCircle,
   Wifi,
-  MousePointer2
+  MousePointer2,
+  Radio
 } from "lucide-react";
 import { WorkloadState, Device } from "../types/teleport";
 
@@ -27,8 +25,47 @@ export const RemoteViewport: React.FC<RemoteViewportProps> = ({
 }) => {
   const [interactiveParam, setInteractiveParam] = useState<number>(50);
   const [commandFeedback, setCommandFeedback] = useState<string | null>(null);
+  const [lastFrameTime, setLastFrameTime] = useState<number>(Date.now());
+  const [fps, setFps] = useState<number>(20);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamSocketRef = useRef<WebSocket | null>(null);
 
   const sourceDevice = devices.find((d) => d.id === workload?.currentDeviceId);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.hostname === "localhost" ? "localhost:3000" : window.location.host;
+    const streamUrl = `${protocol}//${host}/ws/stream`;
+
+    const ws = new WebSocket(streamUrl);
+    streamSocketRef.current = ws;
+
+    ws.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data);
+        if (parsed.type === "STREAM_FRAME" && parsed.data?.frameData) {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = canvasRef.current;
+            if (canvas) {
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                setLastFrameTime(Date.now());
+              }
+            }
+          };
+          img.src = parsed.data.frameData;
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   const handleCommand = (action: string, payload?: any) => {
     fetch("/api/teleport/remote-command", {
@@ -45,145 +82,132 @@ export const RemoteViewport: React.FC<RemoteViewportProps> = ({
     })
       .then((res) => res.json())
       .then(() => {
-        setCommandFeedback(`Command "${action}" forwarded to source host.`);
+        setCommandFeedback(`Command "${action}" relayed to host successfully.`);
         setTimeout(() => setCommandFeedback(null), 3000);
       });
   };
 
   return (
-    <div className="vantage-panel p-6 space-y-6 ticks">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rule pb-4">
+    <div className="teleport-panel p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <MonitorPlay className="w-4 h-4 text-warn" />
-            <h2 className="text-sm font-display font-medium text-ink">
-              Interactive remote access viewport (Neko architecture)
+            <MonitorPlay className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-bold text-white tracking-tight">
+              Interactive Remote Access Viewport (Neko Architecture)
             </h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-warn-dim text-warn border border-warn-border">
-              fallback relay
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              Active LAN Fallback
             </span>
           </div>
-          <p className="text-xs text-ink-muted mt-1">
-            When hardware migration is infeasible, Teleport preserves uninterrupted execution on the source and streams display with bidirectional input forwarding
+          <p className="text-xs text-slate-400 mt-1">
+            When state migration is infeasible or locked to source host, Teleport streams live visual frames and proxies user input over WebSockets.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono text-ink-muted">
+        <div className="flex items-center gap-3 text-xs font-mono text-slate-300">
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-signal animate-signal-pulse" />
-            <span className="teleport-num">30 FPS canvas relay</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Live Stream: 20 FPS WebP</span>
           </div>
-          <span className="text-rule-strong">/</span>
+          <span>|</span>
           <div className="flex items-center gap-1">
-            <Wifi className="w-3.5 h-3.5 text-signal" />
-            <span className="teleport-num">18ms latency</span>
+            <Wifi className="w-3.5 h-3.5 text-cyan-400" />
+            <span>LAN RTT: {sourceDevice?.rttMs || 12}ms</span>
           </div>
         </div>
       </div>
 
       {/* REMOTE STREAM DISPLAY */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 relative rounded overflow-hidden border border-rule bg-bedrock shadow-xl flex flex-col justify-between aspect-video p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-surface/90 border border-rule text-xs font-mono text-ink-muted">
-              <span className="w-1.5 h-1.5 rounded-full bg-warn" />
-              <span>Streaming from: {sourceDevice?.name || "Source Host"}</span>
+        <div className="lg:col-span-2 relative rounded-2xl overflow-hidden border-2 border-slate-800 bg-black shadow-2xl flex flex-col justify-between aspect-video p-4">
+          <div className="flex items-center justify-between z-10">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>Host: {sourceDevice?.name || "Laptop A (Host)"}</span>
             </div>
-            <span className="text-xs font-mono text-ink-faint teleport-num">
-              1920x1080 / 1.4 Mbps
+            <span className="text-[11px] font-mono text-slate-400">
+              Epoch #{workload?.epoch} · Step #{workload?.step.toLocaleString()}
             </span>
           </div>
 
-          {/* SIMULATED WORKLOAD STREAM WINDOW */}
-          <div className="text-center space-y-3 my-auto">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded bg-surface-elevated border border-rule text-warn">
-              <MonitorPlay className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-display font-medium text-ink">
-              {workload?.name}
-            </h3>
-            <p className="text-xs text-ink-muted max-w-md mx-auto leading-relaxed">
-              Workload is actively computing on source device. Interactive inputs below are routed via WebSocket directly into the remote execution loop.
-            </p>
-            <div className="flex items-center justify-center gap-3 text-xs font-mono text-signal">
-              <span>step: #{workload?.step.toLocaleString()}</span>
-              <span className="text-rule-strong">/</span>
-              <span>metric: {workload?.metrics.currentValue}</span>
-            </div>
-          </div>
+          {/* REAL CANVAS VIDEO STREAM */}
+          <canvas
+            ref={canvasRef}
+            width={640}
+            height={360}
+            className="w-full h-full object-contain rounded-lg border border-slate-800/80 my-auto"
+          />
 
-          <div className="flex items-center justify-between text-[11px] text-ink-faint border-t border-rule pt-2 font-mono">
-            <span className="flex items-center gap-1">
-              <MousePointer2 className="w-3 h-3 text-signal" />
-              <span>Direct pointer forwarding active</span>
+          <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/80 pt-2 z-10 font-mono">
+            <span className="flex items-center gap-1 text-cyan-400">
+              <MousePointer2 className="w-3.5 h-3.5" />
+              Bidirectional Command Forwarding Active
             </span>
-            <span>WebRTC datachannel emulation</span>
+            <span>Channel: /ws/stream</span>
           </div>
         </div>
 
         {/* INTERACTIVE REMOTE CONTROL PANEL */}
-        <div className="vantage-panel-elevated p-5 space-y-4 flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-5 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-rule pb-3">
-              <Sliders className="w-4 h-4 text-warn" />
-              <h4 className="text-xs font-display font-medium text-ink">
-                Remote command dispatcher
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+              <Sliders className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                Remote Command Dispatcher
               </h4>
             </div>
 
-            {/* PARAMETER SLIDER */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-ink-muted">Execution velocity:</span>
-                <span className="font-mono text-signal font-semibold teleport-num">{interactiveParam}%</span>
+            {/* STATUS DISPLAY */}
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-slate-300">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Active Workload:</span>
+                <span className="text-white font-bold">{workload?.name}</span>
               </div>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={interactiveParam}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setInteractiveParam(val);
-                  handleCommand("SET_PARAM", { velocityPercent: val });
-                }}
-                className="w-full h-1.5 bg-bedrock rounded appearance-none cursor-pointer accent-[#A3E635] border border-rule"
-              />
+              <div className="flex justify-between">
+                <span className="text-slate-500">Execution Status:</span>
+                <span className={workload?.status === "RUNNING" ? "text-emerald-400" : "text-amber-400"}>
+                  {workload?.status}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Progress:</span>
+                <span className="text-cyan-400">{workload?.metrics.progressPercent}%</span>
+              </div>
             </div>
 
             {/* ACTION BUTTONS */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => handleCommand("PAUSE")}
-                className="vantage-btn-secondary py-1.5 px-3 text-xs"
+                onClick={() => handleCommand(workload?.status === "RUNNING" ? "PAUSE" : "RESUME")}
+                className="py-2.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
               >
-                <Pause className="w-3.5 h-3.5 text-warn" />
-                <span>Pause</span>
+                {workload?.status === "RUNNING" ? (
+                  <>
+                    <Pause className="w-3.5 h-3.5" /> Pause Host
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 text-emerald-400" /> Resume Host
+                  </>
+                )}
               </button>
+
               <button
-                onClick={() => handleCommand("RESUME")}
-                className="vantage-btn-primary py-1.5 px-3 text-xs"
+                onClick={() => handleCommand("RESET")}
+                className="py-2.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
               >
-                <Play className="w-3.5 h-3.5" />
-                <span>Resume</span>
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Step
               </button>
             </div>
 
-            {/* FORWARD INPUT MOCK */}
-            <button
-              onClick={() => handleCommand("INJECT_INPUT", { key: "SIGCONT", payload: "user_keystroke" })}
-              className="w-full vantage-btn-secondary py-2 px-3 text-xs flex items-center justify-center gap-2"
-            >
-              <Send className="w-3.5 h-3.5 text-signal" />
-              <span>Forward keystroke buffer</span>
-            </button>
+            {commandFeedback && (
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>{commandFeedback}</span>
+              </div>
+            )}
           </div>
-
-          {commandFeedback && (
-            <div className="p-2 rounded bg-signal-dim border border-signal-border text-xs text-signal font-mono">
-              {commandFeedback}
-            </div>
-          )}
         </div>
       </div>
     </div>
