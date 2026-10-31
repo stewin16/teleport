@@ -53,7 +53,7 @@ export class YouTubeWorkload extends BaseWorkload {
   }
 
   public tick(): void {
-    if (!this.isPlaying || this.status !== "RUNNING") return;
+    if (!this.isPlaying || (this.status !== "RUNNING" && this.status !== "REMOTE_FALLBACK")) return;
 
     const now = Date.now();
     const elapsedSeconds = Math.max(0.01, (now - this.lastTickTime) / 1000);

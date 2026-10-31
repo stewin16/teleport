@@ -74,7 +74,18 @@ export function generateDeviceToken(deviceId: string): string {
  * Verifies that a device token is authentic.
  */
 export function verifyDeviceToken(deviceId: string, token: string): boolean {
-  const expected = generateDeviceToken(deviceId);
-  return crypto.timingSafeEqual(Buffer.from(token, "hex"), Buffer.from(expected, "hex"));
+  if (typeof token !== "string" || token.length !== 64) {
+    return false;
+  }
+  try {
+    const expected = generateDeviceToken(deviceId);
+    const tokenBuf = Buffer.from(token, "hex");
+    const expectedBuf = Buffer.from(expected, "hex");
+    if (tokenBuf.length !== expectedBuf.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(tokenBuf, expectedBuf);
+  } catch {
+    return false;
+  }
 }
-

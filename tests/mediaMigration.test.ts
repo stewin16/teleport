@@ -49,3 +49,4 @@ describe("YouTube Tab Stateful Workload Migration", () => {
     expect(workload.isPlaying).toBe(true);
   });
 });
+

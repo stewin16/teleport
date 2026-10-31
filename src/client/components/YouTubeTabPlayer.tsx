@@ -1,5 +1,5 @@
-import React from "react";
-import { Play, Pause, RotateCcw, FastForward, Film, CheckCircle2, Radio } from "lucide-react";
+import React, { useState } from "react";
+import { Play, Pause, RotateCcw, FastForward, Film, CheckCircle2, Tv, Monitor } from "lucide-react";
 import { WorkloadState } from "../types/teleport";
 
 interface YouTubeTabPlayerProps {
@@ -15,6 +15,8 @@ export const YouTubeTabPlayer: React.FC<YouTubeTabPlayerProps> = ({
   onInitiateMigration,
   isMigrating
 }) => {
+  const [viewMode, setViewMode] = useState<"embed" | "hud">("embed");
+
   const isYoutube = workload?.type === "youtube_player";
   if (!isYoutube || !workload) return null;
 
@@ -56,6 +58,32 @@ export const YouTubeTabPlayer: React.FC<YouTubeTabPlayerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Mode Switcher */}
+          <div className="flex items-center p-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono">
+            <button
+              onClick={() => setViewMode("embed")}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 transition-all ${
+                viewMode === "embed"
+                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>YouTube Video</span>
+            </button>
+            <button
+              onClick={() => setViewMode("hud")}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 transition-all ${
+                viewMode === "hud"
+                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>Telemetry HUD</span>
+            </button>
+          </div>
+
           <div className="px-3 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 font-mono text-xs text-indigo-300">
             Playback: <strong className="text-white">{formatTime(currentTime)}</strong> / {formatTime(duration)}
           </div>
@@ -65,31 +93,46 @@ export const YouTubeTabPlayer: React.FC<YouTubeTabPlayerProps> = ({
       {/* EMBEDDED VIDEO VIEWPORT & STATE DISPLAY */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 relative aspect-video bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-xl flex flex-col justify-between p-4 group">
-          {/* Simulated Web Video / Canvas Display */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
-
-          {/* Video Placeholder Backdrop with dynamic motion */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center space-y-2 select-none">
-              <Film className={`w-16 h-16 mx-auto text-cyan-400/40 ${isPlaying ? "animate-pulse" : ""}`} />
-              <div className="font-bold text-white tracking-wide text-sm">{title}</div>
-              <div className="text-xs font-mono text-cyan-300">Stream ID: {videoId}</div>
+          {viewMode === "embed" ? (
+            <div className="absolute inset-0 z-0">
+              <iframe
+                key={`${videoId}-${Math.floor(currentTime / 5) * 5}`}
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?start=${Math.floor(currentTime)}&autoplay=${isPlaying ? 1 : 0}&enablejsapi=1`}
+                title={title}
+                className="w-full h-full border-0 rounded-2xl"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Simulated Web Video / Canvas Display */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
+
+              {/* Video Placeholder Backdrop with dynamic motion */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center space-y-2 select-none">
+                  <Film className={`w-16 h-16 mx-auto text-cyan-400/40 ${isPlaying ? "animate-pulse" : ""}`} />
+                  <div className="font-bold text-white tracking-wide text-sm">{title}</div>
+                  <div className="text-xs font-mono text-cyan-300">Stream ID: {videoId}</div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Top Bar inside Viewport */}
-          <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-300">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md border border-slate-700/60">
+          <div className="relative z-10 flex items-center justify-between text-xs font-mono text-slate-300 pointer-events-none">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md border border-slate-700/60 pointer-events-auto">
               <span className={`w-2 h-2 rounded-full ${isPlaying ? "bg-emerald-400 animate-ping" : "bg-amber-400"}`} />
               <span>{isPlaying ? "PLAYING" : "PAUSED"}</span>
             </div>
-            <div className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md border border-slate-700/60">
+            <div className="px-2.5 py-1 rounded-md bg-slate-900/80 backdrop-blur-md border border-slate-700/60 pointer-events-auto">
               Timestamp: {formatTime(currentTime)}
             </div>
           </div>
 
           {/* Bottom Bar Controls inside Viewport */}
-          <div className="relative z-10 space-y-2">
+          <div className="relative z-10 space-y-2 bg-slate-900/90 p-2.5 rounded-xl border border-slate-700/60 backdrop-blur-md">
             <input
               type="range"
               min={0}
@@ -109,7 +152,7 @@ export const YouTubeTabPlayer: React.FC<YouTubeTabPlayerProps> = ({
                 </button>
                 <span className="font-mono text-slate-200">{formatTime(currentTime)}</span>
               </div>
-              <span className="font-mono text-[11px] text-slate-400">1080p 60fps WebRTC Track</span>
+              <span className="font-mono text-[11px] text-slate-400">1080p 60fps Native State Stream</span>
             </div>
           </div>
         </div>

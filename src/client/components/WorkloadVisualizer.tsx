@@ -45,7 +45,12 @@ export const WorkloadVisualizer: React.FC<WorkloadVisualizerProps> = ({
 
     const interval = setInterval(() => {
       const canvas = canvasRef.current;
-      if (canvas && streamWs.readyState === WebSocket.OPEN && workload && workload.status === "RUNNING") {
+      if (
+        canvas &&
+        streamWs.readyState === WebSocket.OPEN &&
+        workload &&
+        (workload.status === "RUNNING" || workload.status === "REMOTE_FALLBACK")
+      ) {
         try {
           const dataUrl = canvas.toDataURL("image/webp", 0.4);
           streamWs.send(

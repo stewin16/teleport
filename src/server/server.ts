@@ -94,10 +94,71 @@ migrationCoordinator.setOnStageChange((event) => {
   broadcast("MIGRATION_STAGE", event);
 });
 
+// Real remote handoff handler for connected physical agents
+migrationCoordinator.setRemoteHandoffHandler(async (targetDeviceId, workload, envelope, nextEpoch) => {
+  const targetWs = agentSockets.get(targetDeviceId);
+  if (!targetWs) {
+    // If not a connected physical agent (e.g. virtual node), allow coordinator to restore locally
+    return true;
+  }
+
+  if (targetWs.readyState !== WebSocket.OPEN) {
+    throw new Error(`Target physical agent ${targetDeviceId} connection is not open.`);
+  }
+
+  return new Promise<boolean>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Timeout awaiting TARGET_RESTORE_ACK from physical node ${targetDeviceId}`));
+    }, 5000);
+
+    const onMessage = (data: WebSocket.RawData) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === "TARGET_RESTORE_ACK") {
+          const ackData = msg.data || msg;
+          if (ackData.workloadId === workload.id) {
+            cleanup();
+            if (ackData.success) {
+              resolve(true);
+            } else {
+              reject(new Error(ackData.error || "Physical node restore failed"));
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      targetWs.off("message", onMessage);
+    };
+
+    targetWs.on("message", onMessage);
+
+    targetWs.send(
+      JSON.stringify({
+        type: "TARGET_RESTORE_REQUEST",
+        data: {
+          workloadId: workload.id,
+          workloadType: workload instanceof YouTubeWorkload ? "youtube_player" : "monte_carlo",
+          envelope,
+          newEpoch: nextEpoch
+        }
+      })
+    );
+  });
+});
+
 // Real-Time Execution Tick Loop (approx 7Hz / 150ms for smooth UI rendering)
 setInterval(() => {
   for (const workload of workloads.values()) {
-    if (workload.status === "RUNNING") {
+    if (
+      (workload.status === "RUNNING" || workload.status === "REMOTE_FALLBACK") &&
+      !agentSockets.has(workload.currentDeviceId)
+    ) {
       workload.tick();
     }
   }
@@ -179,13 +240,20 @@ app.post("/api/teleport/workloads/action", (req, res) => {
   const w = workloads.get(workloadId || activeWorkloadId);
   if (!w) return res.status(404).json({ error: "Workload not found" });
 
-  if (action === "PAUSE") w.pause();
-  else if (action === "RESUME") w.resume();
-  else if (action === "SEEK" && w instanceof YouTubeWorkload && payload?.seconds !== undefined) {
-    w.seekTo(payload.seconds);
-  } else if (action === "RESET") {
-    w.step = 0;
-    w.status = "RUNNING";
+  if (agentSockets.has(w.currentDeviceId)) {
+    const ws = agentSockets.get(w.currentDeviceId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "REMOTE_COMMAND", data: { action, payload, workloadId: w.id } }));
+    }
+  } else {
+    if (action === "PAUSE") w.pause();
+    else if (action === "RESUME") w.resume();
+    else if (action === "SEEK" && w instanceof YouTubeWorkload && payload?.seconds !== undefined) {
+      w.seekTo(payload.seconds);
+    } else if (action === "RESET") {
+      w.step = 0;
+      w.status = "RUNNING";
+    }
   }
 
   res.json({ success: true, workload: w.getStateSummary() });
@@ -217,6 +285,22 @@ app.post("/api/teleport/migrate", async (req, res) => {
   const workload = workloads.get(workloadId || activeWorkloadId);
   if (!workload) {
     return res.status(404).json({ error: "Workload not found" });
+  }
+
+  // If source was executing on a remote physical node, notify it to fence immediately
+  if (agentSockets.has(workload.currentDeviceId)) {
+    const sourceWs = agentSockets.get(workload.currentDeviceId);
+    if (sourceWs && sourceWs.readyState === WebSocket.OPEN) {
+      sourceWs.send(
+        JSON.stringify({
+          type: "REVOKE_LEASE_COMMAND",
+          data: {
+            epoch: workload.epoch,
+            workloadId: workload.id
+          }
+        })
+      );
+    }
   }
 
   const result = await migrationCoordinator.executeMigration(workload, targetDeviceId, {
@@ -257,10 +341,17 @@ app.post("/api/teleport/remote-command", (req, res) => {
     return res.status(404).json({ error: "Workload not found" });
   }
 
-  if (command.action === "PAUSE") workload.pause();
-  else if (command.action === "RESUME") workload.resume();
-  else if (command.action === "SEEK" && workload instanceof YouTubeWorkload && command.payload?.seconds !== undefined) {
-    workload.seekTo(command.payload.seconds);
+  if (agentSockets.has(workload.currentDeviceId)) {
+    const ws = agentSockets.get(workload.currentDeviceId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "REMOTE_COMMAND", data: command }));
+    }
+  } else {
+    if (command.action === "PAUSE") workload.pause();
+    else if (command.action === "RESUME") workload.resume();
+    else if (command.action === "SEEK" && workload instanceof YouTubeWorkload && command.payload?.seconds !== undefined) {
+      workload.seekTo(command.payload.seconds);
+    }
   }
 
   broadcast("REMOTE_COMMAND_EXECUTED", command);
@@ -269,6 +360,26 @@ app.post("/api/teleport/remote-command", (req, res) => {
 
 // Attach stream relay to HTTP server
 streamRelay.attach(server);
+
+// Hook remote input commands from stream relay to active workloads
+streamRelay.onCommand((cmd) => {
+  const workload = workloads.get(cmd.workloadId || activeWorkloadId);
+  if (!workload) return;
+
+  if (agentSockets.has(workload.currentDeviceId)) {
+    const ws = agentSockets.get(workload.currentDeviceId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "REMOTE_COMMAND", data: cmd }));
+    }
+  } else {
+    if (cmd.action === "PAUSE") workload.pause();
+    else if (cmd.action === "RESUME") workload.resume();
+    else if (cmd.action === "SEEK" && workload instanceof YouTubeWorkload && cmd.payload?.seconds !== undefined) {
+      workload.seekTo(cmd.payload.seconds);
+    }
+  }
+  broadcast("REMOTE_COMMAND_EXECUTED", cmd);
+});
 
 // WebSocket Connection Management
 wss.on("connection", (ws) => {

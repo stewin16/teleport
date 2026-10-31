@@ -31,11 +31,20 @@ export function calculateCpuUsage(): number {
   return Math.max(0, Math.min(100, usage));
 }
 
+let cachedBattery: { batteryLevel: number; isCharging: boolean; dischargeRate: number } | null = null;
+let lastBatteryFetch = 0;
+const BATTERY_CACHE_TTL_MS = 20000;
+
 export async function getBatteryStatus(): Promise<{
   batteryLevel: number;
   isCharging: boolean;
   dischargeRate: number;
 }> {
+  const now = Date.now();
+  if (cachedBattery && now - lastBatteryFetch < BATTERY_CACHE_TTL_MS) {
+    return cachedBattery;
+  }
+
   // If on Windows, attempt WMIC / CIM query
   if (process.platform === "win32") {
     try {
@@ -52,7 +61,9 @@ export async function getBatteryStatus(): Promise<{
         const statusCode = matchStatus ? parseInt(matchStatus[1], 10) : 2;
         const isCharging = statusCode !== 1;
         const dischargeRate = isCharging ? 0 : 18;
-        return { batteryLevel, isCharging, dischargeRate };
+        cachedBattery = { batteryLevel, isCharging, dischargeRate };
+        lastBatteryFetch = now;
+        return cachedBattery;
       }
     } catch (e) {
       // Fallback if desktop or access restricted
@@ -60,11 +71,13 @@ export async function getBatteryStatus(): Promise<{
   }
 
   // Graceful AC/Desktop fallback
-  return {
+  cachedBattery = {
     batteryLevel: 92,
     isCharging: true,
     dischargeRate: 0
   };
+  lastBatteryFetch = now;
+  return cachedBattery;
 }
 
 export async function getSystemTelemetry(): Promise<SystemTelemetry> {

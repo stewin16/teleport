@@ -80,3 +80,4 @@ export abstract class BaseWorkload {
 
   public abstract getStateSummary(): WorkloadState;
 }
+

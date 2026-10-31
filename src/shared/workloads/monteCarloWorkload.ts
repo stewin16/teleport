@@ -29,7 +29,7 @@ export class MonteCarloWorkload extends BaseWorkload {
   }
 
   public tick(): void {
-    if (this.status !== "RUNNING") return;
+    if (this.status !== "RUNNING" && this.status !== "REMOTE_FALLBACK") return;
 
     const batchSize = 50;
     for (let i = 0; i < batchSize; i++) {

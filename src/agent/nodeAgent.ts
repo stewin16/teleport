@@ -231,3 +231,4 @@ if (process.argv[1]?.endsWith("nodeAgent.ts") || process.argv[1]?.endsWith("node
   const agent = new NodeAgent({ coordinatorUrl: coordinatorArg });
   agent.connect();
 }
+

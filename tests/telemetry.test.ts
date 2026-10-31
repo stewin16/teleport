@@ -18,3 +18,4 @@ describe("Real Windows Telemetry Subsystem", () => {
     expect(typeof telemetry.isCharging).toBe("boolean");
   });
 });
+

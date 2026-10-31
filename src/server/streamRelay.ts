@@ -21,7 +21,7 @@ export class StreamRelay {
     this.wss = new WebSocketServer({ noServer: true });
 
     server.on("upgrade", (request, socket, head) => {
-      const pathname = new URL(request.url || "", `http://${request.headers.host}`).pathname;
+      const pathname = (request.url || "").split("?")[0];
 
       if (pathname === "/ws/stream") {
         this.wss?.handleUpgrade(request, socket, head, (ws) => {

@@ -8,9 +8,26 @@ import { MigrationEvent, MigrationStage, SnapshotPayload } from "./types.js";
 export class MigrationCoordinator {
   private activeMigrations: Map<string, MigrationEvent> = new Map();
   private onStageChangeCallback?: (event: MigrationEvent) => void;
+  private remoteHandoffHandler?: (
+    targetDeviceId: string,
+    workload: BaseWorkload,
+    envelope: EncryptedEnvelope,
+    nextEpoch: number
+  ) => Promise<boolean>;
 
   public setOnStageChange(cb: (event: MigrationEvent) => void) {
     this.onStageChangeCallback = cb;
+  }
+
+  public setRemoteHandoffHandler(
+    handler: (
+      targetDeviceId: string,
+      workload: BaseWorkload,
+      envelope: EncryptedEnvelope,
+      nextEpoch: number
+    ) => Promise<boolean>
+  ) {
+    this.remoteHandoffHandler = handler;
   }
 
   private emitStage(
@@ -191,6 +208,13 @@ export class MigrationCoordinator {
       await delay(stepDelay);
 
       // --- STAGE 6: TARGET_RESTORED (New Epoch Granted) ---
+      if (this.remoteHandoffHandler) {
+        const handedOff = await this.remoteHandoffHandler(targetDeviceId, workload, envelope, nextEpoch);
+        if (!handedOff) {
+          throw new Error(`Remote node ${targetDeviceId} rejected state handoff.`);
+        }
+      }
+
       epochLeaseManager.commitTargetActivation(workload.id, targetDeviceId, nextEpoch);
       workload.restoreState(restoredState, nextEpoch, targetDeviceId);
 
@@ -234,4 +258,3 @@ export class MigrationCoordinator {
 }
 
 export const migrationCoordinator = new MigrationCoordinator();
-
