@@ -12,11 +12,14 @@ import { epochLeaseManager } from "./epochFencing.js";
 import { migrationCoordinator } from "./migrationCoordinator.js";
 import { geminiExplainer } from "./geminiExplainer.js";
 import { BaseWorkload } from "./workloads/baseWorkload.js";
-import { MonteCarloWorkload } from "./workloads/monteCarloWorkload.js";
+import { MonteCarloWorkload } from "../shared/workloads/monteCarloWorkload.js";
+import { YouTubeWorkload } from "../shared/workloads/youtubeWorkload.js";
 import { NeuralWorkload } from "./workloads/neuralWorkload.js";
 import { ContainerWorkload } from "./workloads/containerWorkload.js";
 import { GpuWorkload } from "./workloads/gpuWorkload.js";
 import { RemoteControlCommand } from "./types.js";
+import { getSystemTelemetry } from "../shared/telemetry.js";
+import { streamRelay } from "./streamRelay.js";
 
 dotenv.config();
 
@@ -29,20 +32,47 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+// Physical node agent sockets
+const agentSockets: Map<string, WebSocket> = new Map();
+
+// Register local host machine as physical node 1
+getSystemTelemetry().then((tel) => {
+  deviceRegistry.register({
+    id: "node-laptop-host",
+    name: `Laptop A (${tel.hostname}) [HOST]`,
+    os: tel.os,
+    arch: tel.arch,
+    cores: tel.cores,
+    totalMemoryMB: tel.totalMemoryMB,
+    freeMemoryMB: tel.freeMemoryMB,
+    batteryLevel: tel.batteryLevel,
+    isCharging: tel.isCharging,
+    dischargeRate: tel.dischargeRate,
+    rttMs: 2,
+    bandwidthMbps: 350,
+    isPhysical: true,
+    isVirtual: false,
+    hostname: tel.hostname
+  });
+}).catch(() => {});
+
 // Active Workloads Collection
 const workloads: Map<string, BaseWorkload> = new Map();
 const monteCarlo = new MonteCarloWorkload("node-thinkpad-x1");
+const youtube = new YouTubeWorkload("node-thinkpad-x1");
 const neural = new NeuralWorkload("node-macbook-m3");
 const container = new ContainerWorkload("node-ubuntu-server");
 const gpu = new GpuWorkload("node-thinkpad-x1");
 
 workloads.set(monteCarlo.id, monteCarlo);
+workloads.set(youtube.id, youtube);
 workloads.set(neural.id, neural);
 workloads.set(container.id, container);
 workloads.set(gpu.id, gpu);
 
 // Initialize Epoch 1 leases
 epochLeaseManager.initializeLease(monteCarlo.id, monteCarlo.currentDeviceId);
+epochLeaseManager.initializeLease(youtube.id, youtube.currentDeviceId);
 epochLeaseManager.initializeLease(neural.id, neural.currentDeviceId);
 epochLeaseManager.initializeLease(container.id, container.currentDeviceId);
 epochLeaseManager.initializeLease(gpu.id, gpu.currentDeviceId);
@@ -85,9 +115,7 @@ setInterval(() => {
 setInterval(() => {
   const devices = deviceRegistry.getAll();
   for (const d of devices) {
-    // If not charging and has a discharge rate, gradually simulate realistic battery drain
-    if (!d.isCharging && d.dischargeRate > 0 && d.batteryLevel > 0) {
-      // Small fractional decrement
+    if (d.isVirtual && !d.isCharging && d.dischargeRate > 0 && d.batteryLevel > 0) {
       d.batteryLevel = Math.max(0, +(d.batteryLevel - (d.dischargeRate / 3600)).toFixed(2));
     }
   }
@@ -102,7 +130,8 @@ app.get("/api/teleport/status", (req, res) => {
     version: "1.0.0",
     uptimeSeconds: process.uptime(),
     activeWorkloadId,
-    connectedClients: wss.clients.size
+    connectedClients: wss.clients.size,
+    physicalAgents: agentSockets.size
   });
 });
 
@@ -146,13 +175,15 @@ app.post("/api/teleport/workloads/select", (req, res) => {
 });
 
 app.post("/api/teleport/workloads/action", (req, res) => {
-  const { workloadId, action } = req.body;
+  const { workloadId, action, payload } = req.body;
   const w = workloads.get(workloadId || activeWorkloadId);
   if (!w) return res.status(404).json({ error: "Workload not found" });
 
   if (action === "PAUSE") w.pause();
   else if (action === "RESUME") w.resume();
-  else if (action === "RESET") {
+  else if (action === "SEEK" && w instanceof YouTubeWorkload && payload?.seconds !== undefined) {
+    w.seekTo(payload.seconds);
+  } else if (action === "RESET") {
     w.step = 0;
     w.status = "RUNNING";
   }
@@ -226,21 +257,24 @@ app.post("/api/teleport/remote-command", (req, res) => {
     return res.status(404).json({ error: "Workload not found" });
   }
 
-  // Forward command to workload
   if (command.action === "PAUSE") workload.pause();
   else if (command.action === "RESUME") workload.resume();
-  else if (command.action === "SET_PARAM" && command.payload) {
-    // E.g. Adjust parameters
+  else if (command.action === "SEEK" && workload instanceof YouTubeWorkload && command.payload?.seconds !== undefined) {
+    workload.seekTo(command.payload.seconds);
   }
 
   broadcast("REMOTE_COMMAND_EXECUTED", command);
   res.json({ success: true, command });
 });
 
+// Attach stream relay to HTTP server
+streamRelay.attach(server);
+
 // WebSocket Connection Management
 wss.on("connection", (ws) => {
-  // Send initial cluster state upon connect
+  let boundDeviceId: string | null = null;
   const activeW = workloads.get(activeWorkloadId);
+
   ws.send(
     JSON.stringify({
       type: "INIT_STATE",
@@ -256,11 +290,59 @@ wss.on("connection", (ws) => {
   ws.on("message", (msg) => {
     try {
       const parsed = JSON.parse(msg.toString());
-      if (parsed.type === "CLIENT_HEARTBEAT" && parsed.deviceId) {
+
+      if (parsed.type === "PHYSICAL_AGENT_REGISTER") {
+        const { deviceId, name, telemetry } = parsed.data;
+        boundDeviceId = deviceId;
+        agentSockets.set(deviceId, ws);
+
+        deviceRegistry.register({
+          id: deviceId,
+          name: name || `Laptop (${deviceId})`,
+          os: telemetry.os,
+          arch: telemetry.arch,
+          cores: telemetry.cores,
+          totalMemoryMB: telemetry.totalMemoryMB,
+          freeMemoryMB: telemetry.freeMemoryMB,
+          batteryLevel: telemetry.batteryLevel,
+          isCharging: telemetry.isCharging,
+          dischargeRate: telemetry.dischargeRate,
+          rttMs: 10,
+          bandwidthMbps: 150,
+          isPhysical: true,
+          isVirtual: false,
+          hostname: telemetry.hostname
+        });
+
+        broadcast("DEVICES_UPDATE", deviceRegistry.getAll());
+        console.log(`[COORDINATOR] Physical agent registered: ${deviceId} (${name})`);
+      } else if (parsed.type === "PHYSICAL_AGENT_HEARTBEAT") {
+        const { deviceId, telemetry } = parsed.data;
+        deviceRegistry.updateHeartbeat(deviceId, telemetry);
+      } else if (parsed.type === "AGENT_WORKLOAD_TICK") {
+        const { workload: remoteSummary } = parsed.data;
+        const localW = workloads.get(remoteSummary.id);
+        if (localW) {
+          localW.step = remoteSummary.step;
+          localW.status = remoteSummary.status;
+          broadcast("WORKLOAD_TICK", {
+            workload: remoteSummary,
+            epoch: parsed.data.epoch
+          });
+        }
+      } else if (parsed.type === "CLIENT_HEARTBEAT" && parsed.deviceId) {
         deviceRegistry.updateHeartbeat(parsed.deviceId, parsed.telemetry);
       }
     } catch (e) {
       // ignore malformed ws messages
+    }
+  });
+
+  ws.on("close", () => {
+    if (boundDeviceId) {
+      agentSockets.delete(boundDeviceId);
+      deviceRegistry.setStatus(boundDeviceId, "OFFLINE");
+      broadcast("DEVICES_UPDATE", deviceRegistry.getAll());
     }
   });
 });
@@ -280,4 +362,5 @@ if (fs.existsSync(distPath)) {
 server.listen(PORT, () => {
   console.log(`[TELEPORT ORCHESTRATOR] Running on http://localhost:${PORT}`);
   console.log(`[TELEPORT WEBSOCKET] Listening on ws://localhost:${PORT}/ws`);
+  console.log(`[TELEPORT STREAM] Listening on ws://localhost:${PORT}/ws/stream`);
 });

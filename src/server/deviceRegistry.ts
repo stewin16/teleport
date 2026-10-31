@@ -24,7 +24,8 @@ export class DeviceRegistry {
         bandwidthMbps: 180,
         lastHeartbeat: Date.now(),
         status: "ONLINE",
-        isVirtual: false
+        isVirtual: true,
+        isPhysical: false
       },
       {
         id: "node-thinkpad-x1",
@@ -41,7 +42,8 @@ export class DeviceRegistry {
         bandwidthMbps: 140,
         lastHeartbeat: Date.now(),
         status: "ONLINE",
-        isVirtual: false
+        isVirtual: true,
+        isPhysical: false
       },
       {
         id: "node-pixel-mobile",
@@ -58,7 +60,8 @@ export class DeviceRegistry {
         bandwidthMbps: 45,
         lastHeartbeat: Date.now(),
         status: "ONLINE",
-        isVirtual: false
+        isVirtual: true,
+        isPhysical: false
       },
       {
         id: "node-ubuntu-server",
@@ -75,7 +78,8 @@ export class DeviceRegistry {
         bandwidthMbps: 350,
         lastHeartbeat: Date.now(),
         status: "ONLINE",
-        isVirtual: true
+        isVirtual: true,
+        isPhysical: false
       }
     ];
 
@@ -109,7 +113,9 @@ export class DeviceRegistry {
       bandwidthMbps: deviceData.bandwidthMbps || 100,
       lastHeartbeat: Date.now(),
       status: "ONLINE",
-      isVirtual: deviceData.isVirtual || false
+      isVirtual: deviceData.isVirtual ?? false,
+      isPhysical: deviceData.isPhysical ?? true,
+      hostname: deviceData.hostname || deviceData.name
     };
 
     this.devices.set(updated.id, updated);
@@ -128,8 +134,12 @@ export class DeviceRegistry {
       if (telemetry.isCharging !== undefined) device.isCharging = telemetry.isCharging;
       if (telemetry.dischargeRate !== undefined) device.dischargeRate = telemetry.dischargeRate;
       if (telemetry.freeMemoryMB !== undefined) device.freeMemoryMB = telemetry.freeMemoryMB;
+      if (telemetry.totalMemoryMB !== undefined) device.totalMemoryMB = telemetry.totalMemoryMB;
       if (telemetry.rttMs !== undefined) device.rttMs = telemetry.rttMs;
       if (telemetry.bandwidthMbps !== undefined) device.bandwidthMbps = telemetry.bandwidthMbps;
+      if (telemetry.cores !== undefined) device.cores = telemetry.cores;
+      if (telemetry.isPhysical !== undefined) device.isPhysical = telemetry.isPhysical;
+      if (telemetry.hostname) device.hostname = telemetry.hostname;
     }
 
     return device;
@@ -142,9 +152,6 @@ export class DeviceRegistry {
     }
   }
 
-  /**
-   * Chaos injection: adjust a device's telemetry on demand to test feasibility rules
-   */
   public applyChaos(id: string, chaos: {
     batteryLevel?: number;
     dischargeRate?: number;
@@ -168,4 +175,3 @@ export class DeviceRegistry {
 }
 
 export const deviceRegistry = new DeviceRegistry();
-
